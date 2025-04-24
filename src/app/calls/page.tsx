@@ -8,7 +8,6 @@ const Calls = () => {
   return (
     <>
       <NavigationBar trigger={<NewGroup />} />
-      <CallContent />
     </>
   );
 };
