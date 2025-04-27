@@ -40,7 +40,7 @@ export const create = mutation({
     await ctx.db.patch(args.conversationId, {
       lastMessage: message,
     });
-
+    
     return message;
   },
 });

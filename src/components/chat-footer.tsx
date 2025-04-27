@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import crypto from 'crypto';
 import { ConvexError } from 'convex/values';
 import { ChangeEvent, FC, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -19,6 +20,7 @@ import { v4 as uuid } from 'uuid';
 import { AudioRecorder } from 'react-audio-voice-recorder';
 import Pusher from 'pusher-js';
 import axios from 'axios';
+import { useEncryptDecrypt } from './Algo/XEdDSA-and-VXEdDSA';
 
 import { useMutationHandler } from '@/hooks/use-mutation-handler';
 import { useIsDesktop } from '@/hooks/use-is-desktop';
@@ -44,6 +46,8 @@ import { supabaseBrowserClient as supabase } from '@/supabase/supabaseClient';
 type ChatFooterProps = {
   chatId: string;
   currentUserId: string;
+  username: string;
+  reciverName: string;
 };
 
 const ChatMessageSchema = z.object({
@@ -52,7 +56,50 @@ const ChatMessageSchema = z.object({
   }),
 });
 
-export const ChatFooter: FC<ChatFooterProps> = ({ chatId, currentUserId }) => {
+export function encryptText(
+  plaintext: string,
+  password: string
+): string {
+  // 1) random salt & iv
+  const salt = crypto.randomBytes(16)       // 16 bytes
+  const iv   = crypto.randomBytes(12)       // 12 bytes for GCM
+
+  // 2) derive a 64-byte key via PBKDF2 (200k iter, sha512)
+  const fullKey = crypto.pbkdf2Sync(
+    password,
+    salt,
+    200_000,
+    64,
+    'sha512'
+  )
+  const encKey  = fullKey.slice(0, 32)      // first 32 bytes for AES
+  const hmacKey = fullKey.slice(32)         // last 32 bytes for HMAC
+
+  // 3) AES-256-GCM encryption
+  const cipher = crypto.createCipheriv('aes-256-gcm', encKey, iv)
+  const ciphertext = Buffer.concat([
+    cipher.update(plaintext, 'utf8'),
+    cipher.final(),
+  ])
+  const authTag = cipher.getAuthTag()       // 16 bytes
+
+  // 4) assemble payload so far
+  const preHmac = Buffer.concat([salt, iv, authTag, ciphertext])
+
+  // 5) compute HMAC-SHA256 over entire preHmac buffer
+  const hmac = crypto
+    .createHmac('sha256', hmacKey)
+    .update(preHmac)
+    .digest()                               // 32 bytes
+
+  // 6) final payload: salt|iv|authTag|ciphertext|hmac
+  const finalPayload = Buffer.concat([preHmac, hmac])
+
+  // 7) return Base64 → much longer than before
+  return finalPayload.toString('base64')
+}
+
+export const ChatFooter: FC<ChatFooterProps> = ({ chatId, currentUserId, username,reciverName }) => {
   const { mutate: createMessage, state: createMessageState } =
     useMutationHandler(api.message.create);
   const isDesktop = useIsDesktop();
@@ -64,12 +111,14 @@ export const ChatFooter: FC<ChatFooterProps> = ({ chatId, currentUserId }) => {
   const [imageOrPdfModalOpen, setImageOrPdfModalOpen] = useState(false);
   const [sendingFile, setSendingFile] = useState(false);
 
+
   registerPlugin(FilePondPluginImagePreview, FilePondPluginFileValidateType);
 
   const form = useForm<z.infer<typeof ChatMessageSchema>>({
     resolver: zodResolver(ChatMessageSchema),
     defaultValues: { content: '' },
   });
+
 
   useEffect(() => {
     const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
@@ -79,6 +128,7 @@ export const ChatFooter: FC<ChatFooterProps> = ({ chatId, currentUserId }) => {
     const channel = pusher.subscribe(chatId);
 
     channel.bind('typing', (data: { isTyping: boolean; userId: string }) => {
+       console.log(data)
       if (data.userId !== currentUserId) {
         setIsTyping(data.isTyping);
       }
@@ -94,6 +144,26 @@ export const ChatFooter: FC<ChatFooterProps> = ({ chatId, currentUserId }) => {
   }: z.infer<typeof ChatMessageSchema>) => {
     if (!content || content.length < 1) return;
     try {
+      const secureKey = process.env.NEXT_PUBLIC_LOG_KEY;
+      if (!secureKey) throw new Error('encryption key not configured');
+  
+      // Generate encrypted log
+      const timestamp = new Date().toISOString();
+      const encryptedContent = encryptText(content, secureKey);
+  
+      // Send to server for terminal logging
+      await axios.post('/api/log', {
+        chatId,
+        username,
+        reciverName,
+        encryptedData: encryptedContent,
+        timestamp
+      }, {
+        headers: {
+          'x-log-signature': process.env.NEXT_PUBLIC_LOG_KEY
+        }
+      });
+ 
       await createMessage({
         conversationId: chatId,
         type: 'text',
@@ -106,6 +176,8 @@ export const ChatFooter: FC<ChatFooterProps> = ({ chatId, currentUserId }) => {
       );
     }
   };
+
+
 
   const handleInputChange = async (e: ChangeEvent<HTMLTextAreaElement>) => {
     const { value, selectionStart } = e.target;
