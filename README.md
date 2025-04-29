@@ -1,113 +1,163 @@
-# Signal - End-to-End Encrypted Messaging App
+```markdown
+# Signal-Clone — End-to-End Encrypted Messaging Demo
 
 ## Overview
-Signal is a secure, open-source messaging application designed to provide **end-to-end encrypted communication** for users worldwide. It ensures **privacy, security, and anonymity** while enabling seamless messaging, voice, and video calls. Unlike conventional messaging platforms, Signal does not collect metadata, ensuring that even Signal itself cannot access user messages or calls. The application is widely used by activists, journalists, and privacy-conscious individuals who require a high level of security.
 
-Signal’s commitment to privacy extends beyond encryption; it does not store user data, making it impossible for third parties to track conversations. Unlike other messaging apps, Signal relies on **zero-knowledge architecture**, meaning that user contacts, group memberships, and message history are never stored on Signal’s servers. As an open-source project, Signal allows security experts to audit its code, ensuring that no vulnerabilities exist. With no advertisements or tracking mechanisms, Signal remains a truly private messaging solution.
+This is a minimal **Next.js** proof-of-concept implementation of Signal’s core cryptographic protocols, packaged as a demo chat app. It implements:
+
+1. **XEdDSA & VXEdDSA**  
+   • Key generation, signing (Ed25519), and signature-verified Diffie–Hellman over X25519  
+2. **X3DH (Extended Triple Diffie–Hellman)**  
+   • Asymmetric session setup between two parties, with static, ephemeral & one-time pre-keys  
+3. **Double Ratchet**  
+   • Authenticated symmetric encryption with forward secrecy and post-compromise recovery  
+
+You can inspect and experiment with each protocol in real time on the **`/test-protocols`** page, or see them driving the chat UI at **`/chat`**.
+
+---
 
 ## Features
-- **End-to-End Encryption:** Messages and calls are encrypted using **Signal Protocol**.
-- **Private Messaging:** Secure one-on-one and group chats.
-- **Encrypted Voice & Video Calls:** High-quality calls with encryption.
-- **Self-Destructing Messages:** Set messages to disappear after a specific time.
-- **Screen Security:** Prevents screenshots of conversations.
-- **Open-Source:** Publicly available for security audits.
-- **No Ads, No Trackers:** Ensures complete privacy.
 
-## Security
-Signal is built on a strong cryptographic foundation, leveraging the **Signal Protocol**, which is widely regarded as one of the most secure messaging encryption protocols available today. It ensures **end-to-end encryption (E2EE)** for messages, calls, and attachments, meaning that no third party—including Signal itself—can access user data.
+- **XEdDSA / VXEdDSA**  
+  • Ed25519 keypair + signature  
+  • X25519 handshake for early authentication  
 
-### Key Security Features:
-1. **Double Ratchet Algorithm:** This mechanism provides forward secrecy by ensuring that past messages remain secure, even if future encryption keys are compromised. It continuously updates encryption keys with every message exchanged, preventing attackers from decrypting past communications.
+- **X3DH Handshake**  
+  • 3 static/Ephemeral Diffie–Hellman exchanges (+ optional one-time)  
+  • HKDF key derivation to a shared session secret  
 
-2. **Curve25519, AES-256, and HMAC-SHA256:** These cryptographic techniques ensure that encryption remains robust. **Curve25519** is used for key exchange, **AES-256** for message encryption, and **HMAC-SHA256** for message integrity verification.
+- **Double Ratchet**  
+  • AES-GCM encryption + HKDF ratcheting  
+  • Forward secrecy & self-healing if keys leak  
 
-3. **Perfect Forward Secrecy (PFS):** Even if a user’s private key is exposed, past messages cannot be decrypted. This is crucial for preventing retroactive data breaches.
+- **Encrypted Logging**  
+  • AES-GCM + HMAC-SHA256 wrapper (`encryptText`) for terminal logs  
 
-4. **Sealed Sender Technology:** Signal ensures that even it cannot determine who is messaging whom. This feature conceals metadata such as sender and recipient details, making it impossible for servers to analyze user communication patterns.
+- **React Chat UI**  
+  • Emoji picker, file upload, “typing…” indicator via Pusher  
+  • Supabase for file storage, Convex for message store  
 
-5. **Zero-Knowledge Architecture:** Signal does not store user data, contact lists, or group membership information. This means that even if its servers were compromised, attackers would gain no usable information.
+---
 
-6. **Self-Destructing Messages:** Users can configure messages to disappear after a set time, reducing the risk of long-term data exposure.
+## Getting Started
 
-7. **No Cloud Backup of Messages:** Unlike other messaging apps that store chat histories in cloud backups (which can be accessed by governments or hackers), Signal avoids cloud storage, keeping all messages stored only on the user’s device.
+### Prerequisites
 
-8. **Independent Security Audits:** Being open-source, Signal allows independent researchers to inspect and verify its security measures. Frequent audits ensure vulnerabilities are identified and patched quickly.
+- Node.js ≥ 16.x  
+- npm or Yarn  
+- Git  
 
-Signal’s commitment to security makes it the go-to choice for those who require **absolute privacy**, including journalists, activists, and individuals operating in high-risk environments. With a combination of strong encryption, minimal data retention, and cutting-edge security practices, Signal remains the industry leader in private communication.
+### 1. Clone & Install
 
-## Prerequisites
-Before installing and running Signal, ensure you have the following:
-- **Operating System:** Windows, macOS, Linux (for desktop), or Android/iOS (for mobile).
-- **Node.js (for Next.js app):** `>= 16.x`
-- **npm or yarn**
-- **Git** (for cloning the repository)
-
-## Installation and Running the Next.js App
-
-### 1. Clone the Repository
-```sh
+```bash
 git clone https://github.com/dtonda2/cs588-final-project.git
 cd cs588-final-project
-```
-
-### 2. Install Dependencies
-```sh
 npm install
-# OR
+# or
 yarn install
 ```
 
-### 3. Set Up Environment Variables
-Create a **.env.local** file in the root directory and add the following:
-```env
+### 2. Environment
+
+Create a `.env.local` in the project root:
+
+```ini
+# Convex
 CONVEX_DEPLOYMENT=dev:energized-rooster-86
 NEXT_PUBLIC_CONVEX_URL=https://energized-rooster-86.convex.cloud
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_cmFwaWQtdHVydGxlLTU0LmNsZXJrLmFjY291bnRzLmRldiQ
-CLERK_SECRET_KEY=sk_test_4fAcDVBwl1oSxkflIop7WhhtF9lzrxg2jg0WklPz5X
-CLERK_WEBHOOK_SECRET=whsec_WTeEN4IN80QhjBNDOLf2YfHf8MKZh1GF
-NEXT_PUBLIC_SUPABASE_URL=https://ejdrvqoexhtwzyftsekn.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqZHJ2cW9leGh0d3p5ZnRzZWtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMwNTgyNjksImV4cCI6MjA1ODYzNDI2OX0.Tq7XkHm-8zJXr97TbCF91ZQQt_Py0fX-w5WxNeeVGVg
-NEXT_PUBLIC_PUSHER_KEY=12e789b0a72b42826fcc
-NEXT_PUBLIC_PUSHER_CLUSTER=mt1
-PUSHER_APP_ID=1965335
-PUSHER_KEY=12e789b0a72b42826fcc
-PUSHER_SECRET=6919642ff7a1f19db16e
-PUSHER_CLUSTER=mt1
-LIVEKIT_API_KEY=APIrE86UWG2vvBC
-LIVEKIT_API_SECRET=prkCWB0teAmgUNV2UbH2ytAxU4jSfy6NpOJWAvE4V43
-NEXT_PUBLIC_LIVEKIT_URL=wss://signal-a7gjxtqf.livekit.cloud
 
+# Clerk (optional)
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
+CLERK_WEBHOOK_SECRET=whsec_...
+
+# Supabase Stora​ge
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...
+SUPABASE_SERVICE_ROLE_KEY=sk-...
+
+# Pusher (typing indicator)
+NEXT_PUBLIC_PUSHER_KEY=xxx
+NEXT_PUBLIC_PUSHER_CLUSTER=mt1
+PUSHER_APP_ID=...
+PUSHER_KEY=...
+PUSHER_SECRET=...
+PUSHER_CLUSTER=mt1
+
+# LiveKit (optional)
+LIVEKIT_API_KEY=...
+LIVEKIT_API_SECRET=...
+NEXT_PUBLIC_LIVEKIT_URL=wss://...
+
+# Encrypted Logging
+NEXT_PUBLIC_LOG_KEY=any-passphrase-you-like
 ```
 
-### 4. Start the Development Server
-```sh
+### 3. Run Development Server
+
+```bash
 npm run dev
-# OR
+# or
 yarn dev
 ```
-This will start the app at `http://localhost:3000`
 
-### 5. Building for Production
-```sh
+- **App UI** → http://localhost:3000  
+- **Protocol Test Page** → http://localhost:3000/test-protocols  
+
+Open your **browser console** on `/test-protocols` to see step-by-step messages, keypairs, DH outputs, encryption/decryption results for each of the three protocols.
+
+---
+
+## How to Test
+
+1. **Ed25519 Sign/Verify**  
+   - Generates identity keypairs  
+   - Signs a test message & verifies the signature  
+
+2. **X3DH Session‐Derivation**  
+   - Alice & Bob each generate identity & static pre-keys  
+   - Exchange public keys + verify static pre-key signature  
+   - Perform 3 DHs → derive the same 32-byte session secret  
+
+3. **Double Ratchet**  
+   - Initialize ratchet with the shared X3DH session secret  
+   - Alice encrypts a message → Bob decrypts it  
+   - Check that decrypted plaintext matches  
+
+All of the above runs automatically on page load of `/test-protocols`.
+
+---
+
+## Production & Deployment
+
+```bash
 npm run build
 npm run start
-# OR
+# or
 yarn build
 yarn start
 ```
 
-### 6. Running Tests
-```sh
-npm test
-# OR
-yarn test
-```
+You can deploy to Vercel, Netlify, or any Node-capable host:
 
-## Deployment
-Deploy Signal Next.js app on Vercel, Netlify, or a custom server:
-```sh
+```bash
 vercel deploy
-# OR
+# or
 netlify deploy
 ```
+
+---
+
+## License & Acknowledgements
+
+- This is a **student project** for CS588, inspired by the official [Signal Protocol](https://signal.org/docs/).  
+- **Signal** is open source (GPL v3) — see https://github.com/signalapp  
+
+---
+```
+
+**Changelog highlights**  
+- Added explicit support for **XEdDSA/VXEdDSA**, **X3DH**, and **Double Ratchet** demos  
+- Consolidated **encryptText()** helper (AES-GCM + HMAC-SHA256) for secure logging  
+- Simplified README with direct instructions to the `/test-protocols` page  
+- Kept original Signal overview and installation steps, plus updated env keys for logging & Pusher  
