@@ -1,4 +1,3 @@
-```markdown
 # Signal-Clone — End-to-End Encrypted Messaging Demo
 
 ## Overview
@@ -13,8 +12,6 @@ This is a minimal **Next.js** proof-of-concept implementation of Signal’s core
    • Authenticated symmetric encryption with forward secrecy and post-compromise recovery  
 
 You can inspect and experiment with each protocol in real time on the **`/test-protocols`** page, or see them driving the chat UI at **`/chat`**.
-
----
 
 ## Features
 
@@ -150,7 +147,7 @@ netlify deploy
 
 ## License & Acknowledgements
 
-- This is a **student project** for CS588, inspired by the official [Signal Protocol](https://signal.org/docs/).  
+- This is a **student project** for CS588 made by Dhruvraj Tondanoorthy (dhruvton@proton.me), inspired by the official [Signal Protocol](https://signal.org/docs/).  
 - **Signal** is open source (GPL v3) — see https://github.com/signalapp  
 
 ---
