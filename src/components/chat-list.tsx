@@ -15,7 +15,7 @@ export const ChatList: FC = () => {
   // Retrieve the current pathname from the Next.js navigation hook.
   const pathName = usePathname();
   // Extract the chat ID from the current URL by splitting the pathname and taking the last segment.
-  const chatId = pathName.split('/').pop();
+  const chatId = pathName ? pathName.split('/').pop() : null;
 
   // Fetch the conversations data from the Convex API.
   const conversations = useQuery(api.conversations.get);
