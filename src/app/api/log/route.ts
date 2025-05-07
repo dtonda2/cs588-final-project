@@ -3,8 +3,9 @@ import { NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
 
 export async function POST(request: Request) {
-  const { chatId, username, receiverName, encryptedData } = await request.json();
+  const { chatId, username, reciverName, encryptedData } = await request.json();
 
+  
   function getTimestamp() {
     const now = new Date();
     const Y = now.getFullYear();
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
   console.log(`[${getTimestamp()}] INFO  New message request received`);
   console.log(`[${getTimestamp()}] INFO  Chat ID: ${chatId}`);
   console.log(`[${getTimestamp()}] INFO  Sender: ${username}`);
-  console.log(`[${getTimestamp()}] INFO  Receiver: ${receiverName}`);
+  console.log(`[${getTimestamp()}] INFO  Receiver: ${reciverName}`);
   console.log('');
 
   //

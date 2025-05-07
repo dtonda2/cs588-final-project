@@ -86,6 +86,8 @@ export const ChatFooter: FC<ChatFooterProps> = ({
   const { mutate: createMessage, state: createMessageState } =
     useMutationHandler(api.message.create);
 
+    
+
   // UI hooks
   const isDesktop = useIsDesktop();
   const { sidebarWidth } = useSidebarWidth();
@@ -139,11 +141,13 @@ export const ChatFooter: FC<ChatFooterProps> = ({
       const key = process.env.NEXT_PUBLIC_LOG_KEY!;
       const ts = new Date().toISOString();
       const enc = encryptText(text, key);
+      let encryptedData = enc
       await axios.post(
         '/api/log',
-        { chatId, username, reciverName, encryptedData: enc, timestamp: ts },
+        { chatId, username, reciverName, encryptedData },
         { headers: { 'x-log-signature': key } }
       );
+
 
       // backend
       await createMessage({ conversationId: chatId, type: 'text', content: [text] });

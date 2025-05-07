@@ -76,42 +76,63 @@ export class DoubleRatchet {
   }
 
   async decrypt(payload: Uint8Array): Promise<Uint8Array> {
+    // Get the length of the public key (typically 32 bytes)
     const pkLen = nacl.box.publicKeyLength;
+  
+    // Extract the sender's ephemeral public key from the payload
     const dhPub = payload.slice(0, pkLen);
+  
+    // Calculate the start index for the nonce after skipping pubkey and two extra bytes (e.g., version/flag)
     const nonceStart = pkLen + 2;
+  
+    // Extract the nonce used for this message (24 bytes for NaCl secretbox)
     const nonce = payload.slice(nonceStart, nonceStart + nacl.secretbox.nonceLength);
+  
+    // Extract the actual encrypted message (ciphertext)
     const cipher = payload.slice(nonceStart + nacl.secretbox.nonceLength);
-
+  
     let messageKey: Uint8Array;
-
+  
     if (this.ckr === null) {
-      // FIRST message: use sending chain key so both sides match
-      const { chainKey, messageKey: mk } = this.ratchetCK(this.cks);
-      this.cks = chainKey;
-      this.Nr++;
-      messageKey = mk;
+      // If no receiving chain key, this must be the FIRST message received.
+      // Use the sending chain key instead (because both sides start symmetrical)
+      
+      const { chainKey, messageKey: mk } = this.ratchetCK(this.cks); // Derive next chain & message keys
+      this.cks = chainKey;   // Update sending chain key
+      this.Nr++;             // Increment receiving message counter
+      messageKey = mk;       // Use derived message key
     } else {
-      // Subsequent: DH‐ratchet if needed, then receiving chain ratchet
+      // For subsequent messages:
+      // Step 1: Check if we need to perform a DH ratchet (new sender public key)
       if (!arraysEqual(dhPub, this.dhr)) {
-        await this.dhRatchet(dhPub);
+        await this.dhRatchet(dhPub);  // Perform DH ratchet and update receiving chain key
       }
+  
+      // After DH ratchet, receiving chain key should exist
       if (!this.ckr) {
         console.warn('⚠️ No receiving chain—returning empty');
-        return new Uint8Array();
+        return new Uint8Array(); // Return empty if chain key is missing
       }
+  
+      // Step 2: Derive next message key from receiving chain key
       const { chainKey, messageKey: mk } = this.ratchetCK(this.ckr);
-      this.ckr = chainKey;
-      this.Nr++;
-      messageKey = mk;
+      this.ckr = chainKey;   // Update receiving chain key
+      this.Nr++;             // Increment receiving message counter
+      messageKey = mk;       // Use derived message key
     }
-
+  
+    // Attempt to decrypt the ciphertext using NaCl secretbox
     const plain = nacl.secretbox.open(cipher, nonce, messageKey);
+  
     if (!plain) {
       console.warn('⚠️ Decryption failed—returning empty');
-      return new Uint8Array();
+      return new Uint8Array(); // Return empty array on failure
     }
+  
+    // Successfully decrypted — return plaintext
     return plain;
   }
+  
 }
 
 // Helper to compare Uint8Arrays

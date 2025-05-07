@@ -68,7 +68,6 @@ export const ChatContent: FC<{ chatId: Id<'conversations'> }> = ({
     ? conversation?.name
     : conversation?.otherMember?.username || '';
   const status = conversation?.otherMember?.status || '';
-  console.log(name)
 
   return (
     <div className='h-full flex'>
@@ -97,7 +96,6 @@ export const ChatContent: FC<{ chatId: Id<'conversations'> }> = ({
           />
         ))}
       </div>
-
       <ChatFooter chatId={chatId} currentUserId={user?.id!} username={user?.fullName!}  reciverName={name!}/>
     </div>
   );
