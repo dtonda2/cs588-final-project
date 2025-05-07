@@ -41,7 +41,7 @@ export const NavigationBar: FC<NavigationBarProps> = ({ trigger }) => {
           <NavigationMenu orientation='vertical'>
             <NavigationMenuList className='!w-svw md:!w-fit px-5 md:px-0 flex items-center justify-between md:flex-col md:space-y-4'>
               {menuItems.map(({ icon: Icon, label, path }) => {
-                const isActive = isRouteActivePath(pathname, path);
+                const isActive = isRouteActivePath(pathname ?? '', path);
                 return (
                   <Tooltip key={path}>
                     <TooltipTrigger>
